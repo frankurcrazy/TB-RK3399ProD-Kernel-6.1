@@ -931,7 +931,7 @@ static int iep_drv_probe(struct platform_device *pdev)
 	iep_service.enable = false;
 
 #ifdef IEP_CLK_ENABLE
-	data->pd_iep = devm_clk_get(&pdev->dev, "pd_iep");
+	data->pd_iep = devm_clk_get_optional(&pdev->dev, "pd_iep");
 	if (IS_ERR(data->pd_iep)) {
 		IEP_ERR("failed to find iep power down clock source.\n");
 		data->pd_iep = NULL;

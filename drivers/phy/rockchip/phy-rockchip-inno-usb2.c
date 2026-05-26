@@ -1098,7 +1098,7 @@ static int rockchip_usb2phy_set_mode(struct phy *phy,
 		vbus_det_en = false;
 		break;
 	default:
-		dev_info(&rport->phy->dev, "illegal mode\n");
+		dev_dbg(&rport->phy->dev, "illegal mode\n");
 		return ret;
 	}
 
@@ -2478,7 +2478,7 @@ static int rockchip_usb2phy_probe(struct platform_device *pdev)
 	rphy->chg_state = USB_CHG_STATE_UNDEFINED;
 	rphy->chg_type = POWER_SUPPLY_TYPE_UNKNOWN;
 	rphy->edev_self = false;
-	rphy->irq = platform_get_irq(pdev, 0);
+	rphy->irq = platform_get_irq_optional(pdev, 0);
 	platform_set_drvdata(pdev, rphy);
 
 	ret = rockchip_usb2phy_extcon_register(rphy);

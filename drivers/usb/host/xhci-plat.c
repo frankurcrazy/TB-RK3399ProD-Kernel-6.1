@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/acpi.h>
 #include <linux/usb/of.h>
+#include <linux/usb/quirks.h>
 
 #include "xhci.h"
 #include "xhci-plat.h"
@@ -186,6 +187,7 @@ static int xhci_plat_probe(struct platform_device *pdev)
 	int			ret;
 	int			irq;
 	struct xhci_plat_priv	*priv = NULL;
+	bool			usb3_disable_autosuspend = false;
 	bool			of_match;
 
 	if (usb_disabled())
@@ -300,6 +302,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		if (device_property_read_bool(tmpdev, "usb3-lpm-capable"))
 			xhci->quirks |= XHCI_LPM_SUPPORT;
 
+		if (device_property_read_bool(tmpdev, "usb3-disable-autosuspend"))
+			usb3_disable_autosuspend = true;
+
 		if (device_property_read_bool(tmpdev, "quirk-broken-port-ped"))
 			xhci->quirks |= XHCI_BROKEN_PORT_PED;
 
@@ -367,6 +372,10 @@ static int xhci_plat_probe(struct platform_device *pdev)
 		ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED);
 		if (ret)
 			goto put_usb3_hcd;
+
+		if (usb3_disable_autosuspend && xhci->shared_hcd->self.root_hub)
+			xhci->shared_hcd->self.root_hub->quirks |=
+				USB_QUIRK_AUTO_SUSPEND;
 	}
 
 	device_enable_async_suspend(&pdev->dev);

@@ -13,6 +13,7 @@
 #include <linux/usb.h>
 #include <linux/usb/hcd.h>
 
+#include "../host/xhci.h"
 #include "../host/xhci-plat.h"
 #include "core.h"
 
@@ -87,8 +88,9 @@ out:
 
 int dwc3_host_init(struct dwc3 *dwc)
 {
-	struct property_entry	props[5];
+	struct property_entry	props[6];
 	struct platform_device	*xhci;
+	struct xhci_plat_priv	xhci_priv = dwc3_xhci_plat_quirk;
 	int			ret, irq;
 	int			prop_idx = 0;
 
@@ -123,6 +125,10 @@ int dwc3_host_init(struct dwc3 *dwc)
 	if (dwc->usb2_lpm_disable)
 		props[prop_idx++] = PROPERTY_ENTRY_BOOL("usb2-lpm-disable");
 
+	if (device_property_read_bool(dwc->dev,
+				      "snps,dis-u3-autosuspend-quirk"))
+		props[prop_idx++] = PROPERTY_ENTRY_BOOL("usb3-disable-autosuspend");
+
 	/**
 	 * WORKAROUND: dwc3 revisions <=3.00a have a limitation
 	 * where Port Disable command doesn't work.
@@ -138,6 +144,10 @@ int dwc3_host_init(struct dwc3 *dwc)
 	if (!dwc->dis_u2_susphy_quirk)
 		props[prop_idx++] = PROPERTY_ENTRY_BOOL("xhci-u2-broken-suspend");
 
+	if (device_property_read_bool(dwc->dev,
+				      "snps,xhci-slow-suspend-quirk"))
+		xhci_priv.quirks |= XHCI_SLOW_SUSPEND;
+
 	if (prop_idx) {
 		ret = device_create_managed_software_node(&xhci->dev, props, NULL);
 		if (ret) {
@@ -146,8 +156,7 @@ int dwc3_host_init(struct dwc3 *dwc)
 		}
 	}
 
-	ret = platform_device_add_data(xhci, &dwc3_xhci_plat_quirk,
-				       sizeof(struct xhci_plat_priv));
+	ret = platform_device_add_data(xhci, &xhci_priv, sizeof(xhci_priv));
 	if (ret)
 		goto err;
 

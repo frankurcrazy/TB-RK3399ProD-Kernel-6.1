@@ -3349,6 +3349,33 @@ static int clk_dump_show(struct seq_file *s, void *data)
 }
 DEFINE_SHOW_ATTRIBUTE(clk_dump);
 
+static int clk_enable_count_compat_set(void *data, u64 val)
+{
+	struct clk_core *core = data;
+	int ret = 0;
+
+	if (val)
+		ret = clk_prepare_enable(core->hw->clk);
+	else
+		clk_disable_unprepare(core->hw->clk);
+
+	return ret;
+}
+
+static int clk_enable_count_compat_get(void *data, u64 *val)
+{
+	struct clk_core *core = data;
+
+	*val = core->enable_count;
+	return 0;
+}
+
+/* Keep the old writable clk_enable_count debugfs ABI for Toybrick userland. */
+DEFINE_DEBUGFS_ATTRIBUTE(clk_enable_count_compat_fops,
+			 clk_enable_count_compat_get,
+			 clk_enable_count_compat_set,
+			 "%llu\n");
+
 #undef CLOCK_ALLOW_WRITE_DEBUGFS
 #ifdef CLOCK_ALLOW_WRITE_DEBUGFS
 /*
@@ -3608,7 +3635,8 @@ static void clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 	debugfs_create_u32("clk_phase", 0444, root, &core->phase);
 	debugfs_create_file("clk_flags", 0444, root, core, &clk_flags_fops);
 	debugfs_create_u32("clk_prepare_count", 0444, root, &core->prepare_count);
-	debugfs_create_u32("clk_enable_count", 0444, root, &core->enable_count);
+	debugfs_create_file("clk_enable_count", 0644, root, core,
+			    &clk_enable_count_compat_fops);
 	debugfs_create_u32("clk_protect_count", 0444, root, &core->protect_count);
 	debugfs_create_u32("clk_notifier_count", 0444, root, &core->notifier_count);
 	debugfs_create_file("clk_duty_cycle", 0444, root, core,

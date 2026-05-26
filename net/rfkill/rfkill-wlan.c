@@ -651,7 +651,7 @@ static int wlan_platdata_parse_dt(struct device *dev,
 
 	data->ext_clk = devm_clk_get(dev, "clk_wifi");
 	if (IS_ERR(data->ext_clk)) {
-		LOG("%s: The ref_wifi_clk not found !\n", __func__);
+		dev_dbg(dev, "%s: The ref_wifi_clk not found !\n", __func__);
 	} else {
 		of_property_read_u32(node, "ref-clock-frequency",
 				     &ext_clk_value);

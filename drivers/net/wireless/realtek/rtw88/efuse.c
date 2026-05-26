@@ -28,6 +28,18 @@ static void switch_efuse_bank(struct rtw_dev *rtwdev)
 #define block_idx_to_logical_idx(blk_idx, i) \
 	(((blk_idx) << 3) + ((i) << 1))
 
+static u8 rtw_get_efuse_word_count(u8 word_en)
+{
+	u8 word_count = 0;
+	int i;
+
+	for (i = 0; i < 4; i++)
+		if (!invalid_efuse_content(word_en, i))
+			word_count++;
+
+	return word_count;
+}
+
 /* efuse header format
  *
  * | 7        5   4    0 | 7        4   3          0 | 15  8  7   0 |
@@ -65,6 +77,19 @@ static int rtw_dump_logical_efuse_map(struct rtw_dev *rtwdev, u8 *phy_map,
 			blk_idx = get_efuse_blk_idx_1_byte(hdr1);
 			word_en = hdr1 & 0xf;
 			phy_idx += 1;
+		}
+
+		if ((blk_idx << 3) >= logical_size) {
+			u8 word_count = rtw_get_efuse_word_count(word_en);
+
+			if (phy_idx + word_count * 2 > physical_size - protect_size)
+				return -EINVAL;
+
+			rtw_dbg(rtwdev, RTW_DBG_EFUSE,
+				"skip invalid efuse block idx=%u hdr1=0x%02x hdr2=0x%02x\n",
+				blk_idx, hdr1, hdr2);
+			phy_idx += word_count * 2;
+			continue;
 		}
 
 		for (i = 0; i < 4; i++) {

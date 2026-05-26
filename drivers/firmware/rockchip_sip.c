@@ -219,7 +219,7 @@ struct dram_addrmap_info *sip_smc_get_dram_map(void)
 	/* Request share memory size 4KB */
 	res = sip_smc_request_share_mem(1, SHARE_PAGE_TYPE_DDR_ADDRMAP);
 	if (res.a0 != 0) {
-		pr_err("%s: request share memory error!\n", __func__);
+		pr_debug("%s: request share memory error!\n", __func__);
 		return NULL;
 	}
 	m = (struct dram_addrmap_info *)res.a1;
@@ -228,7 +228,7 @@ struct dram_addrmap_info *sip_smc_get_dram_map(void)
 	res = sip_smc_dram(SHARE_PAGE_TYPE_DDR_ADDRMAP, 0,
 			   ROCKCHIP_SIP_CONFIG_DRAM_ADDRMAP_GET);
 	if (res.a0) {
-		pr_err("rockchip_sip_config_dram_addrmap_get error:%lx\n", res.a0);
+		pr_debug("rockchip_sip_config_dram_addrmap_get error:%lx\n", res.a0);
 		return NULL;
 	}
 	map = m;

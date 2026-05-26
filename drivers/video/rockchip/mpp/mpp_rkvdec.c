@@ -1139,9 +1139,13 @@ static int rkvdec_init(struct mpp_dev *mpp)
 	ret = mpp_get_clk_info(mpp, &dec->cabac_clk_info, "clk_cabac");
 	if (ret)
 		mpp_err("failed on clk_get clk_cabac\n");
-	ret = mpp_get_clk_info(mpp, &dec->hevc_cabac_clk_info, "clk_hevc_cabac");
-	if (ret)
-		mpp_err("failed on clk_get clk_hevc_cabac\n");
+	if (of_property_match_string(mpp->dev->of_node,
+				     "clock-names", "clk_hevc_cabac") >= 0) {
+		ret = mpp_get_clk_info(mpp, &dec->hevc_cabac_clk_info,
+				       "clk_hevc_cabac");
+		if (ret)
+			mpp_err("failed on clk_get clk_hevc_cabac\n");
+	}
 	/* Set default rates */
 	mpp_set_clk_info_rate_hz(&dec->aclk_info, CLK_MODE_DEFAULT, 300 * MHZ);
 	mpp_set_clk_info_rate_hz(&dec->core_clk_info, CLK_MODE_DEFAULT, 200 * MHZ);
@@ -1170,9 +1174,16 @@ static int rkvdec_init(struct mpp_dev *mpp)
 	dec->rst_cabac = mpp_reset_control_get(mpp, RST_TYPE_CABAC, "video_cabac");
 	if (!dec->rst_cabac)
 		mpp_err("No cabac reset resource define\n");
-	dec->rst_hevc_cabac = mpp_reset_control_get(mpp, RST_TYPE_HEVC_CABAC, "video_hevc_cabac");
-	if (!dec->rst_hevc_cabac)
-		mpp_err("No hevc cabac reset resource define\n");
+	if (of_property_match_string(mpp->dev->of_node,
+				     "reset-names", "video_hevc_cabac") >= 0 ||
+		    of_property_match_string(mpp->dev->of_node,
+				     "reset-names", "shared_video_hevc_cabac") >= 0) {
+		dec->rst_hevc_cabac = mpp_reset_control_get(mpp,
+						    RST_TYPE_HEVC_CABAC,
+						    "video_hevc_cabac");
+		if (!dec->rst_hevc_cabac)
+			mpp_err("No hevc cabac reset resource define\n");
+	}
 
 	return 0;
 }

@@ -2770,8 +2770,12 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 	}
 
 	bsp_priv->clk_mac_speed = devm_clk_get(dev, "clk_mac_speed");
-	if (IS_ERR(bsp_priv->clk_mac_speed))
-		dev_err(dev, "cannot get clock %s\n", "clk_mac_speed");
+	if (IS_ERR(bsp_priv->clk_mac_speed)) {
+		if (bsp_priv->clock_input)
+			dev_dbg(dev, "cannot get optional clock %s\n", "clk_mac_speed");
+		else
+			dev_err(dev, "cannot get clock %s\n", "clk_mac_speed");
+	}
 
 	if (bsp_priv->clock_input) {
 		dev_info(dev, "clock input from PHY\n");

@@ -298,6 +298,47 @@ static const struct mfd_cell rk818s[] = {
 	},
 };
 
+static bool rk808_mfd_cell_is_present(struct device *dev,
+				      const struct mfd_cell *cell)
+{
+	struct device_node *child;
+
+	if (!dev->of_node || !cell->of_compatible)
+		return true;
+
+	for_each_available_child_of_node(dev->of_node, child) {
+		if (of_device_is_compatible(child, cell->of_compatible)) {
+			of_node_put(child);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static int rk808_add_devices(struct device *dev, const struct mfd_cell *cells,
+			     int nr_cells, struct irq_domain *irq_domain)
+{
+	struct mfd_cell *matched_cells;
+	int i, matched_nr = 0;
+
+	matched_cells = devm_kcalloc(dev, nr_cells, sizeof(*matched_cells),
+				    GFP_KERNEL);
+	if (!matched_cells)
+		return -ENOMEM;
+
+	for (i = 0; i < nr_cells; i++) {
+		if (!rk808_mfd_cell_is_present(dev, &cells[i]))
+			continue;
+
+		matched_cells[matched_nr++] = cells[i];
+	}
+
+	return devm_mfd_add_devices(dev, PLATFORM_DEVID_NONE,
+				    matched_cells, matched_nr, NULL, 0,
+				    irq_domain);
+}
+
 static const struct rk808_reg_data rk801_pre_init_reg[] = {
 	{ RK801_SLEEP_CFG_REG, RK801_SLEEP_FUN_MSK, RK801_NONE_FUN },
 	{ RK801_SYS_CFG2_REG, RK801_RST_MSK, RK801_RST_RESTART_REG_RESETB },
@@ -1614,8 +1655,7 @@ static int rk808_probe(struct i2c_client *client,
 		}
 	}
 
-	ret = devm_mfd_add_devices(&client->dev, PLATFORM_DEVID_NONE,
-			      cells, nr_cells, NULL, 0,
+	ret = rk808_add_devices(&client->dev, cells, nr_cells,
 			      regmap_irq_get_domain(rk808->irq_data));
 	if (ret) {
 		dev_err(&client->dev, "failed to add MFD devices %d\n", ret);

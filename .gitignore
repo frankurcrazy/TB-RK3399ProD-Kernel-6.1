@@ -170,3 +170,7 @@ sphinx_*/
 
 # Rust analyzer configuration
 /rust-project.json
+
+# Generated files from the packaging process
+/boot_linux/
+/boot_linux.img

@@ -38,6 +38,9 @@ rtw88_8723d-objs		:= rtw8723d.o rtw8723d_table.o
 obj-$(CONFIG_RTW88_8723DE)	+= rtw88_8723de.o
 rtw88_8723de-objs		:= rtw8723de.o
 
+obj-$(CONFIG_RTW88_8723DU)	+= rtw88_8723du.o
+rtw88_8723du-objs		:= rtw8723du.o
+
 obj-$(CONFIG_RTW88_8821C)	+= rtw88_8821c.o
 rtw88_8821c-objs		:= rtw8821c.o rtw8821c_table.o
 
@@ -46,3 +49,6 @@ rtw88_8821ce-objs		:= rtw8821ce.o
 
 obj-$(CONFIG_RTW88_PCI)		+= rtw88_pci.o
 rtw88_pci-objs			:= pci.o
+
+obj-$(CONFIG_RTW88_USB)		+= rtw88_usb.o
+rtw88_usb-objs			:= usb.o
