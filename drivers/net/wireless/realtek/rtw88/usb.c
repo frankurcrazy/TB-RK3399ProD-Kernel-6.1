@@ -561,6 +561,9 @@ static int rtw_usb_write_data_rsvd_page(struct rtw_dev *rtwdev, u8 *buf,
 	if (!skb)
 		return -ENOMEM;
 
+	/* The first reserved page must go through beacon queue semantics. */
+	pkt_info.qsel = TX_DESC_QSEL_BEACON;
+
 	return rtw_usb_write_data(rtwdev, &pkt_info, skb);
 }
 
@@ -892,7 +895,18 @@ static void rtw_usb_deep_ps(struct rtw_dev *rtwdev, bool enter)
 
 static void rtw_usb_link_ps(struct rtw_dev *rtwdev, bool enter)
 {
-	/* empty function for rtw_hci_ops */
+	if (enter)
+		return;
+
+	if (!test_bit(RTW_FLAG_POWERON, rtwdev->flags))
+		return;
+
+	/* The 8723DU USB firmware needs an explicit RPWM wake before the
+	 * active power-mode H2C; without it, leave-LPS can time out while the
+	 * device is still in low-power clocking.
+	 */
+	if (rtwdev->chip->id == RTW_CHIP_TYPE_8723D)
+		rtw_power_mode_change(rtwdev, false);
 }
 
 static void rtw_usb_interface_cfg(struct rtw_dev *rtwdev)

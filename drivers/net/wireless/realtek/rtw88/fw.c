@@ -66,13 +66,22 @@ static u16 get_max_amsdu_len(u32 bit_rate)
 struct rtw_fw_iter_ra_data {
 	struct rtw_dev *rtwdev;
 	u8 *payload;
+	u8 length;
 };
+
+static bool rtw_fw_ra_report_short_8723du(struct rtw_dev *rtwdev, u8 length)
+{
+	return rtwdev->chip->id == RTW_CHIP_TYPE_8723D &&
+	       rtwdev->hci.type == RTW_HCI_TYPE_USB &&
+	       length >= 2 && length < 7;
+}
 
 static void rtw_fw_ra_report_iter(void *data, struct ieee80211_sta *sta)
 {
 	struct rtw_fw_iter_ra_data *ra_data = data;
 	struct rtw_sta_info *si = (struct rtw_sta_info *)sta->drv_priv;
-	u8 mac_id, rate, sgi, bw;
+	u8 mac_id, rate, sgi;
+	u8 bw = RTW_CHANNEL_WIDTH_20;
 	u8 mcs, nss;
 	u32 bit_rate;
 
@@ -84,7 +93,8 @@ static void rtw_fw_ra_report_iter(void *data, struct ieee80211_sta *sta)
 
 	rate = GET_RA_REPORT_RATE(ra_data->payload);
 	sgi = GET_RA_REPORT_SGI(ra_data->payload);
-	bw = GET_RA_REPORT_BW(ra_data->payload);
+	if (ra_data->length >= 7)
+		bw = GET_RA_REPORT_BW(ra_data->payload);
 
 	if (rate < DESC_RATEMCS0) {
 		si->ra_report.txrate.legacy = rtw_desc_to_bitrate(rate);
@@ -126,12 +136,21 @@ static void rtw_fw_ra_report_handle(struct rtw_dev *rtwdev, u8 *payload,
 {
 	struct rtw_fw_iter_ra_data ra_data;
 
-	if (WARN(length < 7, "invalid ra report c2h length\n"))
+	if (length < 2) {
+		rtw_warn(rtwdev, "invalid ra report c2h length %u\n", length);
 		return;
+	}
+
+	/* 8723DU USB firmware can omit the bandwidth byte in RA reports. */
+	if (length < 7 && !rtw_fw_ra_report_short_8723du(rtwdev, length)) {
+		rtw_warn(rtwdev, "invalid ra report c2h length %u\n", length);
+		return;
+	}
 
 	rtwdev->dm_info.tx_rate = GET_RA_REPORT_RATE(payload);
 	ra_data.rtwdev = rtwdev;
 	ra_data.payload = payload;
+	ra_data.length = length;
 	rtw_iterate_stas_atomic(rtwdev, rtw_fw_ra_report_iter, &ra_data);
 }
 
