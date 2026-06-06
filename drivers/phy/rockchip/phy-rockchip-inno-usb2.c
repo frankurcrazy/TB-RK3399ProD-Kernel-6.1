@@ -1487,6 +1487,8 @@ static void rockchip_chg_detect_work(struct work_struct *work)
 	dev_dbg(&rport->phy->dev, "chg detection work state = %d\n",
 		rphy->chg_state);
 
+	mutex_lock(&rport->mutex);
+
 	/*
 	 * The conditions for charger detection:
 	 * 1. Set the PHY in normal mode to keep the UTMI_CLK on.
@@ -1497,7 +1499,6 @@ static void rockchip_chg_detect_work(struct work_struct *work)
 	 */
 	switch (rphy->chg_state) {
 	case USB_CHG_STATE_UNDEFINED:
-		mutex_lock(&rport->mutex);
 		/* Store the PHY current suspend configuration */
 		phy_sus_reg = &rport->port_cfg->phy_sus;
 		ret = regmap_read(base, phy_sus_reg->offset,
@@ -1611,10 +1612,12 @@ static void rockchip_chg_detect_work(struct work_struct *work)
 	}
 
 	/*
-	 * Hold the mutex lock during the whole charger
-	 * detection stage, and release it after detect
-	 * the charger type.
+	 * Do not hold rport->mutex across delayed work instances. On
+	 * PREEMPT_RT mutexes are rtmutexes, and retaining ownership after this
+	 * worker returns can self-deadlock later USB role/runtime-PM work that
+	 * re-enters the same PHY.
 	 */
+	mutex_unlock(&rport->mutex);
 	schedule_delayed_work(&rport->chg_work, delay);
 }
 

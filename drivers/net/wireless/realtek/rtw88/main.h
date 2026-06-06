@@ -1997,8 +1997,8 @@ struct rtw_dev {
 	/* ensures exclusive access from mac80211 callbacks */
 	struct mutex mutex;
 
-	/* read/write rf register */
-	spinlock_t rf_lock;
+	/* serialize RF register access, which may sleep on USB HCI */
+	struct mutex rf_mutex;
 
 	/* watch dog every 2 sec */
 	struct delayed_work watch_dog_work;
@@ -2025,8 +2025,8 @@ struct rtw_dev {
 	struct {
 		/* incicate the mail box to use with fw */
 		u8 last_box_num;
-		/* protect to send h2c to fw */
-		spinlock_t lock;
+		/* serialize H2C commands, which may sleep on USB HCI */
+		struct mutex mutex;
 		u32 seq;
 	} h2c;
 

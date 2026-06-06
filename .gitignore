@@ -174,3 +174,5 @@ sphinx_*/
 # Generated files from the packaging process
 /boot_linux/
 /boot_linux.img
+
+/toybrick-rk3399pro-6.1-porting.md

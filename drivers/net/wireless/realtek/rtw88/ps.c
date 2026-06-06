@@ -46,6 +46,65 @@ static void rtw_restore_port_cfg_iter(void *data, u8 *mac,
 	rtw_vif_port_config(rtwdev, rtwvif, config);
 }
 
+struct rtw_restore_port_cfg {
+	const struct rtw_vif_port *conf;
+	enum rtw_net_type net_type;
+	u16 aid;
+	u8 mac_addr[ETH_ALEN];
+	u8 bssid[ETH_ALEN];
+	u8 bcn_ctrl;
+};
+
+struct rtw_restore_port_cfg_data {
+	struct rtw_restore_port_cfg port[RTW_HW_PORT_NUM];
+	u8 count;
+};
+
+static void rtw_restore_port_cfg_collect_iter(void *data, u8 *mac,
+					      struct ieee80211_vif *vif)
+{
+	struct rtw_restore_port_cfg_data *cfg = data;
+	struct rtw_restore_port_cfg *port_cfg;
+	struct rtw_vif *rtwvif = (struct rtw_vif *)vif->drv_priv;
+
+	if (cfg->count >= RTW_HW_PORT_NUM)
+		return;
+
+	port_cfg = &cfg->port[cfg->count++];
+	port_cfg->conf = rtwvif->conf;
+	port_cfg->net_type = rtwvif->net_type;
+	port_cfg->aid = rtwvif->aid;
+	ether_addr_copy(port_cfg->mac_addr, rtwvif->mac_addr);
+	ether_addr_copy(port_cfg->bssid, rtwvif->bssid);
+	port_cfg->bcn_ctrl = rtwvif->bcn_ctrl;
+}
+
+static void rtw_restore_port_cfg(struct rtw_dev *rtwdev)
+{
+	struct rtw_restore_port_cfg_data cfg = {};
+	struct rtw_vif rtwvif = {};
+	u32 config = ~0;
+	int i;
+
+	if (rtw_hci_type(rtwdev) != RTW_HCI_TYPE_USB) {
+		rtw_iterate_vifs_atomic(rtwdev, rtw_restore_port_cfg_iter,
+					rtwdev);
+		return;
+	}
+
+	rtw_iterate_vifs_atomic(rtwdev, rtw_restore_port_cfg_collect_iter,
+				&cfg);
+	for (i = 0; i < cfg.count; i++) {
+		rtwvif.conf = cfg.port[i].conf;
+		rtwvif.net_type = cfg.port[i].net_type;
+		rtwvif.aid = cfg.port[i].aid;
+		ether_addr_copy(rtwvif.mac_addr, cfg.port[i].mac_addr);
+		ether_addr_copy(rtwvif.bssid, cfg.port[i].bssid);
+		rtwvif.bcn_ctrl = cfg.port[i].bcn_ctrl;
+		rtw_vif_port_config(rtwdev, &rtwvif, config);
+	}
+}
+
 int rtw_leave_ips(struct rtw_dev *rtwdev)
 {
 	int ret;
@@ -61,7 +120,7 @@ int rtw_leave_ips(struct rtw_dev *rtwdev)
 		return ret;
 	}
 
-	rtw_iterate_vifs_atomic(rtwdev, rtw_restore_port_cfg_iter, rtwdev);
+	rtw_restore_port_cfg(rtwdev);
 
 	rtw_coex_ips_notify(rtwdev, COEX_IPS_LEAVE);
 
@@ -330,6 +389,12 @@ static void rtw_vif_recalc_lps_iter(void *data, u8 *mac,
 void rtw_recalc_lps(struct rtw_dev *rtwdev, struct ieee80211_vif *new_vif)
 {
 	struct rtw_vif_recalc_lps_iter_data data = { .rtwdev = rtwdev };
+
+	if (rtw_hci_type(rtwdev) == RTW_HCI_TYPE_USB) {
+		rtwdev->ps_enabled = false;
+		rtw_leave_lps(rtwdev);
+		return;
+	}
 
 	if (new_vif)
 		__rtw_vif_recalc_lps(&data, new_vif);

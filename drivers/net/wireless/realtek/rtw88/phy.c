@@ -276,19 +276,29 @@ static u8 rtw_phy_get_rssi_level(u8 old_level, u8 rssi)
 struct rtw_phy_stat_iter_data {
 	struct rtw_dev *rtwdev;
 	u8 min_rssi;
+	struct {
+		u8 mac_id;
+		u8 rssi;
+		bool stbc_en;
+	} rssi_info[RTW_MAX_MAC_ID_NUM];
+	u8 rssi_info_nr;
 };
 
 static void rtw_phy_stat_rssi_iter(void *data, struct ieee80211_sta *sta)
 {
 	struct rtw_phy_stat_iter_data *iter_data = data;
-	struct rtw_dev *rtwdev = iter_data->rtwdev;
 	struct rtw_sta_info *si = (struct rtw_sta_info *)sta->drv_priv;
 	u8 rssi;
 
 	rssi = ewma_rssi_read(&si->avg_rssi);
 	si->rssi_level = rtw_phy_get_rssi_level(si->rssi_level, rssi);
 
-	rtw_fw_send_rssi_info(rtwdev, si);
+	if (iter_data->rssi_info_nr < RTW_MAX_MAC_ID_NUM) {
+		iter_data->rssi_info[iter_data->rssi_info_nr].mac_id = si->mac_id;
+		iter_data->rssi_info[iter_data->rssi_info_nr].rssi = rssi;
+		iter_data->rssi_info[iter_data->rssi_info_nr].stbc_en = si->stbc_en;
+		iter_data->rssi_info_nr++;
+	}
 
 	iter_data->min_rssi = min_t(u8, rssi, iter_data->min_rssi);
 }
@@ -297,10 +307,16 @@ static void rtw_phy_stat_rssi(struct rtw_dev *rtwdev)
 {
 	struct rtw_dm_info *dm_info = &rtwdev->dm_info;
 	struct rtw_phy_stat_iter_data data = {};
+	int i;
 
 	data.rtwdev = rtwdev;
 	data.min_rssi = U8_MAX;
 	rtw_iterate_stas_atomic(rtwdev, rtw_phy_stat_rssi_iter, &data);
+	for (i = 0; i < data.rssi_info_nr; i++)
+		rtw_fw_send_rssi_info_by_macid(rtwdev,
+					       data.rssi_info[i].mac_id,
+					       data.rssi_info[i].rssi,
+					       data.rssi_info[i].stbc_en);
 
 	dm_info->pre_min_rssi = dm_info->min_rssi;
 	dm_info->min_rssi = data.min_rssi;
@@ -542,6 +558,9 @@ static void rtw_phy_ra_info_update_iter(void *data, struct ieee80211_sta *sta)
 static void rtw_phy_ra_info_update(struct rtw_dev *rtwdev)
 {
 	if (rtwdev->watch_dog_cnt & 0x3)
+		return;
+
+	if (rtw_hci_type(rtwdev) == RTW_HCI_TYPE_USB)
 		return;
 
 	rtw_iterate_stas_atomic(rtwdev, rtw_phy_ra_info_update_iter, rtwdev);
