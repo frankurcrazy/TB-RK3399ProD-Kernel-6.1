@@ -34,6 +34,27 @@
 /* No U-Boot logo hand-over on this image (see Toybrick prod-linux). */
 /delete-node/ &drm_logo;
 
+/*
+ * pstore/ramoops.  rk3399-linux.dtsi points a top-level "ramoops" node at a
+ * reserved region through memory-region, which this kernel's ramoops driver
+ * does not support ("failed to locate DT /reserved-memory resource"), and
+ * gives its sizes as two cells where the driver reads one.  Describe the same
+ * region the upstream way: a "ramoops" child of /reserved-memory.
+ */
+/delete-node/ &ramoops;
+/delete-node/ &ramoops_mem;
+
+&{/reserved-memory} {
+	ramoops@110000 {
+		compatible = "ramoops";
+		reg = <0x0 0x110000 0x0 0xf0000>;
+		record-size = <0x40000>;
+		console-size = <0x80000>;
+		ftrace-size = <0x0>;
+		pmsg-size = <0x0>;
+	};
+};
+
 / {
 	model = "ASUS Tinker Edge R";
 	compatible = "asus,tinker-edge-r", "rockchip,rk3399pro-tinker-edge-r",
