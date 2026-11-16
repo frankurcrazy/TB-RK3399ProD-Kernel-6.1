@@ -46,8 +46,17 @@
 	};
 
 	chosen {
-		/* Overridden by the bootloader (extlinux append); kept as a sane default. */
-		bootargs = "earlycon=uart8250,mmio32,0xff180000 console=ttyFIQ0,115200n8 console=tty0 swiotlb=1 coherent_pool=1m";
+		/*
+		 * No bootargs here, and none inherited from rk3399-linux.dtsi.
+		 * Rockchip's U-Boot merges /chosen/bootargs OVER the extlinux
+		 * "append" line (fdt_chosen -> env_update_filter: an argument
+		 * with the same key is replaced), so whatever is set here wins.
+		 * The earlycon on UART0 this node used to carry hung every boot:
+		 * U-Boot only sets up UART2, and the 8250 early console waits
+		 * forever on an uninitialised UART.  The kernel command line
+		 * lives in /boot/extlinux/extlinux.conf alone.
+		 */
+		/delete-property/ bootargs;
 	};
 
 	adc-keys {
