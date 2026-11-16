@@ -773,6 +773,12 @@
 	i2c-scl-rising-time-ns = <140>;
 	i2c-scl-falling-time-ns = <30>;
 
+	/*
+	 * ASUS's DTS lists an MPU6500 IMU and an AK8963 compass here, but on
+	 * the boards checked nothing answers at 0x68 or 0x0d, under the stock
+	 * 4.4 image or this kernel; only the EEPROM does.  Set these to "okay"
+	 * on a board that has them.
+	 */
 	mpu6500@68 {
 		compatible = "invensense,mpu6500";
 		reg = <0x68>;
@@ -781,11 +787,13 @@
 		mount-matrix = "0", "1", "0",
 			       "1", "0", "0",
 			       "0", "0", "1";
+		status = "disabled";
 	};
 
 	ak8963@d {
 		compatible = "asahi-kasei,ak8963";
 		reg = <0x0d>;
+		status = "disabled";
 		interrupt-parent = <&gpio3>;
 		interrupts = <RK_PD7 IRQ_TYPE_EDGE_RISING>;
 	};
