@@ -102,6 +102,7 @@ enum {
 enum {
 	FAN53555_CHIP_REV_00 = 0x3,
 	FAN53555_CHIP_REV_13 = 0xf,
+	FAN53555_CHIP_REV_23 = 0xc,
 };
 
 enum {
@@ -296,6 +297,16 @@ static int fan53555_voltages_setup_fairchild(struct fan53555_device_info *di)
 		case FAN53555_CHIP_REV_13:
 			di->vsel_min = 800000;
 			di->vsel_step = 10000;
+			break;
+		case FAN53555_CHIP_REV_23:
+			/*
+			 * Option 00, mask revision 12: VDD_CPU_B and VDD_GPU on
+			 * the ASUS Tinker Edge R.  600 mV + 12.5 mV per step, as
+			 * in ASUS's 4.4 kernel (TinkerEdgeR/debian-kernel), which
+			 * runs this board.
+			 */
+			di->vsel_min = 600000;
+			di->vsel_step = 12500;
 			break;
 		default:
 			dev_err(di->dev,
