@@ -416,6 +416,7 @@
 &gmac {
 	phy-supply = <&vcc_phy>;
 	phy-mode = "rgmii";
+	phy-handle = <&rtl8211f>;
 	clock_in_out = "input";
 	snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
@@ -427,6 +428,29 @@
 	tx_delay = <0x23>;
 	rx_delay = <0x22>;
 	status = "okay";
+
+	mdio {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rtl8211f: ethernet-phy@0 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <0>;
+			/*
+			 * The stock LED setup, from set_led_configuration() in
+			 * ASUS's 4.4 stmmac_main.c (and read back on the stock
+			 * image): LED0 blinks on activity, LED1 lights on a
+			 * gigabit link, LED2 on a 100M link; EEE LED mode off.
+			 * The PHY reset at probe would otherwise leave the reset
+			 * value 0x6251 (one LED per link speed, plus activity),
+			 * which on a gigabit link lights only the right-hand LED,
+			 * in orange.
+			 */
+			realtek,led-config = <0x8910>;
+			realtek,eee-led-disable;
+		};
+	};
 };
 
 &gpu {
