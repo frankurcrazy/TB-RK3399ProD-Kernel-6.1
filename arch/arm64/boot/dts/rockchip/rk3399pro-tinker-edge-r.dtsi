@@ -192,6 +192,17 @@
 		};
 	};
 
+	/*
+	 * The SoC serial number (/proc/cpuinfo "Serial") from the eFuse CPU ID,
+	 * mixed the way Rockchip's U-Boot derives serial# - the board's stock
+	 * serial number.  rk3399.dtsi has the cell but no cpuinfo node.
+	 */
+	cpuinfo {
+		compatible = "rockchip,cpuinfo";
+		nvmem-cells = <&cpu_id>;
+		nvmem-cell-names = "id";
+	};
+
 	rk_headset {
 		compatible = "rockchip_headset";
 		headset_gpio = <&gpio0 RK_PB5 GPIO_ACTIVE_HIGH>;
