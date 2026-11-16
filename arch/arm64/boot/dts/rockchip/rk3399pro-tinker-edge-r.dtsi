@@ -179,9 +179,10 @@
 		simple-audio-card,mclk-fs = <256>;
 		/*
 		 * No widgets/routing: this tree's rk817 codec driver has no DAPM
-		 * widgets (it switches paths through its own controls), so the
-		 * MICBIAS1/IN1P/HPOL/HPOR routes ASUS's DTS carries could never be
-		 * added and only logged errors at every boot.
+		 * widgets (it switches paths through its own controls).  With the
+		 * MICBIAS1/IN1P/HPOL/HPOR routes ASUS's DTS carries, adding them
+		 * failed with -ENODEV and the whole card was torn down: no analog
+		 * audio card at all.  Do not add routes back.
 		 */
 
 		simple-audio-card,cpu {
