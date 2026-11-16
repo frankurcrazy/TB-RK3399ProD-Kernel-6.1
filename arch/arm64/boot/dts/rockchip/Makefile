@@ -106,6 +106,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-sapphire-excavator.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399-sapphire-excavator-edp-avb.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-toybrick-prod-linux.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-tinker-edge-r.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-tinker-edge-r-hdmirx-csi0.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-tinker-edge-r-hdmirx-csi1.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3399pro-rock-pi-n10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3518-evb1-ddr4-v10.dtb
