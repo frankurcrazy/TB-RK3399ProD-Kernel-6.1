@@ -754,7 +754,12 @@
 	/*
 	 * Geekworm X1301 (TC358743XBG) on CSI0, 2 data lanes.  297 MHz link
 	 * frequency = 594 Mbps/lane: 1080p30 / 720p60 4:2:2 like the Raspberry
-	 * Pi tc358743 overlay.  Probe fails harmlessly when nothing is attached.
+	 * Pi tc358743 overlay.
+	 *
+	 * Optional, so disabled here: with no board attached the tc35874x
+	 * driver retries its I2C reads once a second forever and floods the
+	 * kernel log.  Boot the rk3399pro-tinker-edge-r-hdmirx-csi0.dtb
+	 * variant (extlinux entry "hdmirx-csi0") once an X1301 is plugged in.
 	 */
 	hdmirx_csi0: tc358743@f {
 		compatible = "toshiba,tc358743";
@@ -765,7 +770,7 @@
 		rockchip,camera-module-facing = "back";
 		rockchip,camera-module-name = "X1301-HDMI-RX";
 		rockchip,camera-module-lens-name = "none";
-		status = "okay";
+		status = "disabled";
 
 		port {
 			hdmirx_csi0_out: endpoint {
