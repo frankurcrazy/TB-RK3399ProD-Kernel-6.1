@@ -44,6 +44,10 @@
 
 #define RTL8211F_CLKOUT_EN			BIT(0)
 
+#define RTL8211F_LED_PAGE			0xd04
+#define RTL8211F_LEDCR				0x10
+#define RTL8211F_EEELCR				0x11
+
 #define RTL8201F_ISR				0x1e
 #define RTL8201F_ISR_ANERR			BIT(15)
 #define RTL8201F_ISR_DUPLEX			BIT(13)
@@ -80,6 +84,9 @@ struct rtl821x_priv {
 	u16 phycr1;
 	u16 phycr2;
 	bool has_phycr2;
+	u16 ledcr;
+	bool has_ledcr;
+	bool eee_led_disable;
 };
 
 static int rtl821x_read_page(struct phy_device *phydev)
@@ -97,6 +104,7 @@ static int rtl821x_probe(struct phy_device *phydev)
 	struct device *dev = &phydev->mdio.dev;
 	struct rtl821x_priv *priv;
 	u32 phy_id = phydev->drv->phy_id;
+	u32 ledcr;
 	int ret;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
@@ -121,6 +129,25 @@ static int rtl821x_probe(struct phy_device *phydev)
 		if (of_property_read_bool(dev->of_node, "realtek,clkout-disable"))
 			priv->phycr2 &= ~RTL8211F_CLKOUT_EN;
 	}
+
+	/*
+	 * Board LED wiring.  "realtek,led-config" is the LED control register
+	 * (LCR, page 0xd04 reg 0x10) value, "realtek,eee-led-disable" clears
+	 * the EEE LED control register (EEELCR, page 0xd04 reg 0x11).  Without
+	 * them both registers keep their reset values: the PHY reset at probe
+	 * undoes whatever the bootloader programmed.
+	 */
+	if (!of_property_read_u32(dev->of_node, "realtek,led-config", &ledcr)) {
+		if (ledcr > 0xffff) {
+			dev_warn(dev, "realtek,led-config 0x%x is not a 16-bit value, ignored\n",
+				 ledcr);
+		} else {
+			priv->ledcr = ledcr;
+			priv->has_ledcr = true;
+		}
+	}
+	priv->eee_led_disable = of_property_read_bool(dev->of_node,
+						      "realtek,eee-led-disable");
 
 	phydev->priv = priv;
 
@@ -335,6 +362,27 @@ static int rtl8211c_config_init(struct phy_device *phydev)
 			    CTL1000_ENABLE_MASTER | CTL1000_AS_MASTER);
 }
 
+static int rtl8211f_config_leds(struct phy_device *phydev)
+{
+	struct rtl821x_priv *priv = phydev->priv;
+	int oldpage, ret = 0;
+
+	oldpage = phy_select_page(phydev, RTL8211F_LED_PAGE);
+	if (oldpage < 0)
+		goto err_restore_page;
+
+	if (priv->eee_led_disable) {
+		ret = __phy_write(phydev, RTL8211F_EEELCR, 0);
+		if (ret)
+			goto err_restore_page;
+	}
+	if (priv->has_ledcr)
+		ret = __phy_write(phydev, RTL8211F_LEDCR, priv->ledcr);
+
+err_restore_page:
+	return phy_restore_page(phydev, oldpage, ret);
+}
+
 static int rtl8211f_config_init(struct phy_device *phydev)
 {
 	struct rtl821x_priv *priv = phydev->priv;
@@ -349,6 +397,15 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		dev_err(dev, "aldps mode  configuration failed: %pe\n",
 			ERR_PTR(ret));
 		return ret;
+	}
+
+	if (priv->has_ledcr || priv->eee_led_disable) {
+		ret = rtl8211f_config_leds(phydev);
+		if (ret < 0) {
+			dev_err(dev, "LED configuration failed: %pe\n",
+				ERR_PTR(ret));
+			return ret;
+		}
 	}
 
 	switch (phydev->interface) {
